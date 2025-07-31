@@ -15,14 +15,14 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('Minha API')
+    .setTitle('Optimas API')
     .setDescription('Documentação da API')
     .setVersion('1.0')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document)
+  SwaggerModule.setup('docs', app, document)
 
-  await app.listen(3000);
+  await app.listen(3001);
 }
 bootstrap();

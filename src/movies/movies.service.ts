@@ -1,4 +1,3 @@
-
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -6,11 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-
-interface VodCategory {
-  category_id: string;
-  category_name: string;
-}
+import { CategoriesService } from 'src/categories/categories.service';
 
 @Injectable()
 export class MoviesService {
@@ -23,6 +18,7 @@ export class MoviesService {
     private readonly http: HttpService,
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly categoriesService: CategoriesService,
   ) {
     this.baseUrl = this.config.get<string>('BASE_URL')!;
     this.username = this.config.get<string>('XTREAM_USERNAME')!;
@@ -34,7 +30,6 @@ export class MoviesService {
     url.searchParams.set('username', this.username);
     url.searchParams.set('password', this.password);
     url.searchParams.set('action', action);
-
     if (extraParams) {
       for (const key in extraParams) {
         const value = extraParams[key];
@@ -43,45 +38,16 @@ export class MoviesService {
         }
       }
     }
-
     return url.toString();
   }
 
-  async getVodCategories() {
-  const key = 'vod:categories'; 
-
-  const cached = await this.cacheManager.get(key);
-  if (cached){
-    console.log('Cache hit: Returning cached categories');
-    return cached;
-  } 
-
-  console.log('Cache miss: Fetching categories from API');
-  const response = await firstValueFrom(this.http.get(this.buildUrl('get_vod_categories')));
-
-  console.log('API Response:', response.data);
-  const filteredCategories = response.data.map((category: any) => ({
-    category_id: category.category_id,
-    category_name: category.category_name,
-  }));
-
-  await this.cacheManager.set(key, filteredCategories, 3600);
-
-  return filteredCategories;
-}
-
-
   async getVodStreams(categoryId?: string) {
     const cacheKey = categoryId ? `vod:streams:${categoryId}` : 'vod:streams:all';
-
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
+    const cached = await this.cacheManager.get<any[]>(cacheKey);
+    if (cached) return cached;
 
     const params = categoryId ? { category_id: categoryId } : undefined;
-    const url = this.buildUrl('get_vod_streams', params);
-    const response = await firstValueFrom(this.http.get(url));
+    const response = await firstValueFrom(this.http.get(this.buildUrl('get_vod_streams', params)));
 
     const filteredResults = response.data.map((item: any) => ({
       id: item.stream_id,
@@ -92,8 +58,7 @@ export class MoviesService {
       rating: item.rating_5based,
     }));
 
-    await this.cacheManager.set(cacheKey, filteredResults, 3600);
-
+    await this.cacheManager.set(cacheKey, filteredResults );
     return filteredResults;
   }
 
@@ -109,7 +74,9 @@ export class MoviesService {
     const errors: SyncError[] = [];
 
     try {
-      const categories: VodCategory[] = await this.getVodCategories();
+      const categories = await this.categoriesService.getVodCategories();
+
+      console.log(categories)
 
       for (const category of categories) {
         await this.prisma.vodCategory.upsert({
@@ -123,7 +90,6 @@ export class MoviesService {
       }
 
       for (const category of categories) {
-
         const rawStreams = await this.getVodStreams(String(category.category_id));
         const streams = rawStreams.slice(0, limitPerCategory);
 
@@ -137,27 +103,27 @@ export class MoviesService {
 
             const saved = existing
               ? await this.prisma.vodItem.update({
-                where: { xtream_vod_id: stream.id },
-                data: {
-                  title_original: stream.title,
-                  title_normalized: stream.title.toLowerCase(),
-                  category: { connect: { xtream_category_id: Number(category.category_id) } },
-                  stream_icon: stream.poster,
-                  added_at_xtream: new Date(Number(vodInfo.info?.added) * 1000),
-                  container_extension: vodInfo.info?.container_extension ?? 'mp4',
-                },
-              })
+                  where: { xtream_vod_id: stream.id },
+                  data: {
+                    title_original: stream.title,
+                    title_normalized: stream.title.toLowerCase(),
+                    category: { connect: { xtream_category_id: Number(category.category_id) } },
+                    stream_icon: stream.poster,
+                    added_at_xtream: new Date(Number(vodInfo.info?.added) * 1000),
+                    container_extension: vodInfo.info?.container_extension ?? 'mp4',
+                  },
+                })
               : await this.prisma.vodItem.create({
-                data: {
-                  xtream_vod_id: stream.id,
-                  title_original: stream.title,
-                  title_normalized: stream.title.toLowerCase(),
-                  category: { connect: { xtream_category_id: Number(category.category_id) } },
-                  stream_icon: stream.poster,
-                  added_at_xtream: new Date(Number(vodInfo.info?.added) * 1000),
-                  container_extension: vodInfo.info?.container_extension ?? 'mp4',
-                },
-              });
+                  data: {
+                    xtream_vod_id: stream.id,
+                    title_original: stream.title,
+                    title_normalized: stream.title.toLowerCase(),
+                    category: { connect: { xtream_category_id: Number(category.category_id) } },
+                    stream_icon: stream.poster,
+                    added_at_xtream: new Date(Number(vodInfo.info?.added) * 1000),
+                    container_extension: vodInfo.info?.container_extension ?? 'mp4',
+                  },
+                });
 
             existing ? updated++ : inserted++;
 
@@ -221,9 +187,17 @@ export class MoviesService {
       skipped,
       errorsCount: errors.length,
     };
-
   }
 
+  private async getVodCategoriesLocal() {
+  
+    const url = this.buildUrl('get_vod_categories');
+    const response = await firstValueFrom(this.http.get(url));
+    return response.data.map((category: any) => ({
+      category_id: category.category_id,
+      category_name: category.category_name,
+    }));
+  }
 
   async getVodStreamsFiltered(params: {
     categoryId?: string;
@@ -239,7 +213,7 @@ export class MoviesService {
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter((stream: any) =>
-        stream.name?.toLowerCase().includes(searchLower)
+        stream.title?.toLowerCase().includes(searchLower),
       );
     }
 

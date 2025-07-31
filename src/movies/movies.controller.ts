@@ -8,12 +8,6 @@ import { GetVodStreamsDto } from './dto/create-movie.dto';
 export class MoviesController {
   constructor(private readonly moviesService: MoviesService) {}
 
-  @Get('categories')
-  @ApiOperation({ summary: 'Lista todas as categorias VOD' })
-  getCategories() {
-    return this.moviesService.getVodCategories();
-  }
-
   @Get('streams')
   @ApiOperation({ summary: 'Lista filmes com filtros e paginação' })
   getStreams(@Query() query: GetVodStreamsDto) {
