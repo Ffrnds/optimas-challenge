@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MoviesService = void 0;
 const axios_1 = require("@nestjs/axios");
@@ -15,17 +18,24 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const rxjs_1 = require("rxjs");
 const prisma_service_1 = require("../prisma/prisma.service");
+const cache_manager_1 = require("@nestjs/cache-manager");
+const categories_service_1 = require("../categories/categories.service");
+const lodash_1 = require("lodash");
 let MoviesService = class MoviesService {
+    cacheManager;
     http;
     config;
     prisma;
+    categoriesService;
     baseUrl;
     username;
     password;
-    constructor(http, config, prisma) {
+    constructor(cacheManager, http, config, prisma, categoriesService) {
+        this.cacheManager = cacheManager;
         this.http = http;
         this.config = config;
         this.prisma = prisma;
+        this.categoriesService = categoriesService;
         this.baseUrl = this.config.get('BASE_URL');
         this.username = this.config.get('XTREAM_USERNAME');
         this.password = this.config.get('XTREAM_PASSWORD');
@@ -45,15 +55,13 @@ let MoviesService = class MoviesService {
         }
         return url.toString();
     }
-    async getVodCategories() {
-        const url = this.buildUrl('get_vod_categories');
-        const response = await (0, rxjs_1.firstValueFrom)(this.http.get(url));
-        return response.data;
-    }
     async getVodStreams(categoryId) {
+        const cacheKey = categoryId ? `vod:streams:${categoryId}` : 'vod:streams:all';
+        const cached = await this.cacheManager.get(cacheKey);
+        if (cached)
+            return cached;
         const params = categoryId ? { category_id: categoryId } : undefined;
-        const url = this.buildUrl('get_vod_streams', params);
-        const response = await (0, rxjs_1.firstValueFrom)(this.http.get(url));
+        const response = await (0, rxjs_1.firstValueFrom)(this.http.get(this.buildUrl('get_vod_streams', params)));
         const filteredResults = response.data.map((item) => ({
             id: item.stream_id,
             title: item.name,
@@ -62,6 +70,7 @@ let MoviesService = class MoviesService {
             category_id: item.category_id,
             rating: item.rating_5based,
         }));
+        await this.cacheManager.set(cacheKey, filteredResults);
         return filteredResults;
     }
     async syncVodData(limitPerCategory = 50) {
@@ -71,7 +80,8 @@ let MoviesService = class MoviesService {
         let skipped = 0;
         const errors = [];
         try {
-            const categories = await this.getVodCategories();
+            const categories = await this.categoriesService.getVodCategories();
+            console.log(categories);
             for (const category of categories) {
                 await this.prisma.vodCategory.upsert({
                     where: { xtream_category_id: Number(category.category_id) },
@@ -177,20 +187,28 @@ let MoviesService = class MoviesService {
     }
     async getVodStreamsFiltered(params) {
         const { categoryId, search, page = 1, limit = 20 } = params;
+        const cacheKey = `vod:streams_filtered:${categoryId ?? 'all'}:search=${search ?? ''}:page=${page}:limit=${limit}`;
+        const cached = await this.cacheManager.get(cacheKey);
+        console.log('vod do cache', cached);
+        if (cached) {
+            return cached;
+        }
         const streams = await this.getVodStreams(categoryId);
         let filtered = streams;
         if (search) {
             const searchLower = search.toLowerCase();
-            filtered = filtered.filter((stream) => stream.name?.toLowerCase().includes(searchLower));
+            filtered = filtered.filter((stream) => stream.title?.toLowerCase().includes(searchLower));
         }
         const startIndex = (page - 1) * limit;
         const paginated = filtered.slice(startIndex, startIndex + limit);
-        return {
+        const result = {
             total: filtered.length,
             page,
             limit,
             results: paginated,
         };
+        await this.cacheManager.set(cacheKey, result, 60000);
+        return result;
     }
     async getVodInfo(vodId) {
         const url = this.buildUrl('get_vod_info', { vod_id: vodId });
@@ -205,24 +223,65 @@ let MoviesService = class MoviesService {
         const response = await (0, rxjs_1.firstValueFrom)(this.http.get(url, { headers }));
         return response.data;
     }
+    areValuesEquivalent(val1, val2) {
+        if (val1 == null && val2 == null)
+            return true;
+        return (0, lodash_1.isEqual)(val1, val2);
+    }
+    removeDuplicateFields(info, movieData) {
+        const cleanedMovieData = { ...movieData };
+        for (const key of Object.keys(movieData)) {
+            if (key in info) {
+                const infoValue = info[key];
+                const movieValue = movieData[key];
+                const equivalent = this.areValuesEquivalent(infoValue, movieValue);
+                if (equivalent) {
+                    delete cleanedMovieData[key];
+                }
+            }
+        }
+        return cleanedMovieData;
+    }
     async getCombinedMovieData(vodId) {
+        if (!vodId)
+            return null;
+        const cacheKey = `combined_movie:${vodId}`;
+        const cached = await this.cacheManager.get(cacheKey);
+        if (cached)
+            return cached;
         const vodInfo = await this.getVodInfo(vodId);
-        const tmdbId = vodInfo.tmdb_id || (vodInfo?.data && vodInfo.data.tmdb_id);
+        const tmdbId = vodInfo.tmdb_id || vodInfo?.data?.tmdb_id;
+        const info = vodInfo.info || {};
+        const movieData = vodInfo.movie_data || {};
+        const cleanedMovieData = this.removeDuplicateFields(info, movieData);
+        const mergedInfo = { ...info, ...cleanedMovieData };
         if (!tmdbId) {
-            return { ...vodInfo };
+            await this.cacheManager.set(cacheKey, { info: mergedInfo }, 60000);
+            return { info: mergedInfo };
         }
         const tmdbData = await this.getTmdbMovie(Number(tmdbId));
-        return {
-            ...vodInfo,
-            tmdb: tmdbData,
-        };
+        for (const [key, value] of Object.entries(tmdbData)) {
+            if (!(key in mergedInfo) || mergedInfo[key] == null) {
+                mergedInfo[key] = value;
+            }
+        }
+        const combined = { info: mergedInfo };
+        try {
+            await this.cacheManager.set(cacheKey, combined, 60000);
+        }
+        catch (error) {
+            console.error('❌ Erro ao salvar cache:', error);
+        }
+        return combined;
     }
 };
 exports.MoviesService = MoviesService;
 exports.MoviesService = MoviesService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [axios_1.HttpService,
+    __param(0, (0, common_1.Inject)(cache_manager_1.CACHE_MANAGER)),
+    __metadata("design:paramtypes", [Object, axios_1.HttpService,
         config_1.ConfigService,
-        prisma_service_1.PrismaService])
+        prisma_service_1.PrismaService,
+        categories_service_1.CategoriesService])
 ], MoviesService);
 //# sourceMappingURL=movies.service.js.map

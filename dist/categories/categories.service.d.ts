@@ -1,9 +1,18 @@
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { Cache } from 'cache-manager';
+export interface VodCategory {
+    category_id: string;
+    category_name: string;
+}
 export declare class CategoriesService {
-    create(createCategoryDto: CreateCategoryDto): string;
-    findAll(): string;
-    findOne(id: number): string;
-    update(id: number, updateCategoryDto: UpdateCategoryDto): string;
-    remove(id: number): string;
+    private cacheManager;
+    private readonly http;
+    private readonly config;
+    private readonly baseUrl;
+    private readonly username;
+    private readonly password;
+    constructor(cacheManager: Cache, http: HttpService, config: ConfigService);
+    private buildUrl;
+    getVodCategories(): Promise<VodCategory[]>;
 }

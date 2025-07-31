@@ -14,14 +14,32 @@ const movies_module_1 = require("./movies/movies.module");
 const categories_module_1 = require("./categories/categories.module");
 const config_1 = require("@nestjs/config");
 const prisma_module_1 = require("./prisma/prisma.module");
+const cache_manager_1 = require("@nestjs/cache-manager");
+const redisStore = require('cache-manager-ioredis');
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [movies_module_1.MoviesModule, categories_module_1.CategoriesModule, config_1.ConfigModule.forRoot({
+        imports: [
+            movies_module_1.MoviesModule,
+            categories_module_1.CategoriesModule,
+            config_1.ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env', }),
+            prisma_module_1.PrismaModule,
+            cache_manager_1.CacheModule.registerAsync({
                 isGlobal: true,
-            }), prisma_module_1.PrismaModule,],
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: (configService) => ({
+                    store: redisStore,
+                    socket: {
+                        host: configService.get('REDIS_HOST') || 'localhost',
+                        port: +configService.get('REDIS_PORT') || 6379,
+                    },
+                    ttl: 60000,
+                }),
+            }),
+        ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
     })

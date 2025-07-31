@@ -48,7 +48,7 @@ export class CategoriesService {
     const key = 'vod:categories';
 
     const cached = await this.cacheManager.get<VodCategory[]>(key);
-    console.log('CATEGORIAS DO CACHE:', cached);
+    console.log('Categorias do cache:', cached);
 
     if (cached) {
       return cached;

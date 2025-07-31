@@ -1,16 +1,19 @@
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Cache } from 'cache-manager';
+import { CategoriesService } from 'src/categories/categories.service';
 export declare class MoviesService {
+    private cacheManager;
     private readonly http;
     private readonly config;
     private readonly prisma;
+    private readonly categoriesService;
     private readonly baseUrl;
     private readonly username;
     private readonly password;
-    constructor(http: HttpService, config: ConfigService, prisma: PrismaService);
+    constructor(cacheManager: Cache, http: HttpService, config: ConfigService, prisma: PrismaService, categoriesService: CategoriesService);
     private buildUrl;
-    getVodCategories(): Promise<any>;
     getVodStreams(categoryId?: string): Promise<any>;
     syncVodData(limitPerCategory?: number): Promise<{
         inserted: number;
@@ -23,13 +26,10 @@ export declare class MoviesService {
         search?: string;
         page?: number;
         limit?: number;
-    }): Promise<{
-        total: any;
-        page: number;
-        limit: number;
-        results: any;
-    }>;
+    }): Promise<{}>;
     getVodInfo(vodId: string): Promise<any>;
     getTmdbMovie(tmdbId: number): Promise<any>;
-    getCombinedMovieData(vodId: string): Promise<any>;
+    private areValuesEquivalent;
+    private removeDuplicateFields;
+    getCombinedMovieData(vodId: string): Promise<{} | null>;
 }

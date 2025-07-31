@@ -10,13 +10,16 @@ exports.CategoriesModule = void 0;
 const common_1 = require("@nestjs/common");
 const categories_service_1 = require("./categories.service");
 const categories_controller_1 = require("./categories.controller");
+const axios_1 = require("@nestjs/axios");
 let CategoriesModule = class CategoriesModule {
 };
 exports.CategoriesModule = CategoriesModule;
 exports.CategoriesModule = CategoriesModule = __decorate([
     (0, common_1.Module)({
-        controllers: [categories_controller_1.CategoriesController],
+        imports: [axios_1.HttpModule],
         providers: [categories_service_1.CategoriesService],
+        controllers: [categories_controller_1.CategoriesController],
+        exports: [categories_service_1.CategoriesService],
     })
 ], CategoriesModule);
 //# sourceMappingURL=categories.module.js.map

@@ -1,98 +1,108 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# VOD API – Xtream + TMDB
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST desenvolvida com NestJS que integra dados de filmes da plataforma Xtream Codes e os enriquece com informações do TMDB. Persistência em SQLite com cache em Redis.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+##  Funcionalidades Implementadas
 
-## Description
+###  Sincronização VOD
+- [x] Consome endpoints da Xtream: `get_vod_categories`, `get_vod_streams`, `get_vod_info`.
+- [x] Persiste categorias e filmes no banco SQLite via Prisma.
+- [x] Enriquecimento de dados dos filmes com informações do TMDB.
+- [x] Registro de execução com status, quantidade de itens inseridos/atualizados/pulados e erros.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+###  API Pública
+- [x] `GET /movies/streams`: Lista de filmes com filtros e paginação.
+- [x] `GET /movies/info/:vodId`: Dados detalhados do filme via Xtream.
+- [x] `GET /movies/combined/:vodId`: Dados combinados (Xtream + TMDB).
+- [x] `GET /categories`: Lista todas as categorias.
 
-## Project setup
+###  Documentação
+- [x] Swagger disponível em runtime (`/docs`).
 
+---
+
+##  Tecnologias Utilizadas
+
+- **NestJS** (TypeScript)
+- **SQLite** com **Prisma**
+- **Redis** para cache e performance
+- **TMDB API** para enriquecimento dos dados
+- **Axios**, **RxJS**, **Swagger**
+
+---
+
+##  Instalação e Execução
+
+### 1. Clone o repositório e instale dependências
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+### 2. Configure o ambiente
+Crie um arquivo `.env` com as seguintes variáveis:
+```env
+BASE_URL=
+XTREAM_USERNAME=
+XTREAM_PASSWORD=
+DBBASE_URL=
+TMDB_API_TOKEN=
+TMDB_API_KEY=
 ```
 
-## Run tests
-
+### 3. Gere o client do Prisma
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npx prisma generate
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### 4. Rode o projeto
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 5. (Opcional) Use Docker
+```bash
+docker compose up --build
+```
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+##  Testes
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+npm run test
+```
 
-## Support
+---
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+##  Estrutura das Rotas
 
-## Stay in touch
+| Método | Rota                        | Descrição                                           |
+|--------|-----------------------------|-----------------------------------------------------|
+| GET    | `/categories`               | Lista todas as categorias                          |
+| GET    | `/movies/streams`           | Lista filmes com filtros e paginação               |
+| GET    | `/movies/info/:vodId`       | Detalhes do filme diretamente da Xtream            |
+| GET    | `/movies/combined/:vodId`   | Dados enriquecidos (Xtream + TMDB)                 |
+| GET    | `/movies/sync`              | Sincroniza todos os dados com TMDB e Xtream        |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+##  Observações
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- Todas as chamadas externas à Xtream e TMDB são cacheadas em Redis.
+- A sincronização persiste os dados em tabelas normalizadas (`vod_items`, `tmdb_movies`, `vod_categories`).
+- Swagger UI disponível em `/docs` para explorar a API.
+
+---
+
+##  Estrutura do Banco de Dados
+
+- `vod_categories`: id, name, xtream_category_id
+- `vod_items`: id, xtream_vod_id, title_original, title_normalized, category_id, stream_icon, added_at_xtream, container_extension
+- `tmdb_movies`: vod_item_id, tmdb_id, overview, poster_path, backdrop_path, release_date, runtime, vote_average, genres (JSON)
+- `sync_runs`: id, started_at, finished_at, status, inserted, updated, skipped, errors_json
+
+---
+
+##  Licença
+
+Projeto para fins de avaliação técnica.

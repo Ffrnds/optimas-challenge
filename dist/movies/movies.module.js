@@ -13,6 +13,7 @@ const config_1 = require("@nestjs/config");
 const movies_service_1 = require("./movies.service");
 const movies_controller_1 = require("./movies.controller");
 const prisma_module_1 = require("../prisma/prisma.module");
+const categories_module_1 = require("../categories/categories.module");
 let MoviesModule = class MoviesModule {
 };
 exports.MoviesModule = MoviesModule;
@@ -22,6 +23,7 @@ exports.MoviesModule = MoviesModule = __decorate([
             axios_1.HttpModule,
             config_1.ConfigModule,
             prisma_module_1.PrismaModule,
+            categories_module_1.CategoriesModule,
         ],
         providers: [
             movies_service_1.MoviesService,
