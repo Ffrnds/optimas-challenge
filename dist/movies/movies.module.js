@@ -12,6 +12,7 @@ const axios_1 = require("@nestjs/axios");
 const config_1 = require("@nestjs/config");
 const movies_service_1 = require("./movies.service");
 const movies_controller_1 = require("./movies.controller");
+const prisma_module_1 = require("../prisma/prisma.module");
 let MoviesModule = class MoviesModule {
 };
 exports.MoviesModule = MoviesModule;
@@ -20,8 +21,12 @@ exports.MoviesModule = MoviesModule = __decorate([
         imports: [
             axios_1.HttpModule,
             config_1.ConfigModule,
+            prisma_module_1.PrismaModule,
         ],
-        providers: [movies_service_1.MoviesService],
+        providers: [
+            movies_service_1.MoviesService,
+            prisma_module_1.PrismaModule,
+        ],
         controllers: [movies_controller_1.MoviesController],
     })
 ], MoviesModule);

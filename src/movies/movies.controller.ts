@@ -1,6 +1,7 @@
-import { Controller, Get, Query, Param } from '@nestjs/common';
+import { Controller, Get, Query, Param, Search } from '@nestjs/common';
 import { MoviesService } from './movies.service';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { GetVodStreamsDto } from './dto/create-movie.dto';
 
 @ApiTags('Movies')
 @Controller('movies')
@@ -14,10 +15,9 @@ export class MoviesController {
   }
 
   @Get('streams')
-  @ApiOperation({ summary: 'Lista filmes de uma categoria (opcional)' })
-  @ApiQuery({ name: 'categoryId', required: false, description: 'ID da categoria VOD' })
-  getStreams(@Query('categoryId') categoryId?: string) {
-    return this.moviesService.getVodStreams(categoryId);
+  @ApiOperation({ summary: 'Lista filmes com filtros e paginação' })
+  getStreams(@Query() query: GetVodStreamsDto) {
+    return this.moviesService.getVodStreamsFiltered(query);
   }
 
   @Get('info/:vodId')
@@ -26,4 +26,17 @@ export class MoviesController {
   getInfo(@Param('vodId') vodId: string) {
     return this.moviesService.getVodInfo(vodId);
   }
+
+  @Get('combined/:vodId')
+  @ApiOperation({ summary: 'Obtém dados combinados do filme (Xtream + TMDB)' })
+  @ApiParam({ name: 'vodId', description: 'ID do filme' })
+  getCombined(@Param('vodId') vodId: string) {
+    return this.moviesService.getCombinedMovieData(vodId);
+  }
+  @Get('sync')
+  @ApiOperation({ summary: 'Sincroniza categorias e filmes da Xtream com dados do TMDB' })
+  sync() {
+    return this.moviesService.syncVodData(); 
+  }
+
 }

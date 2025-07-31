@@ -1,15 +1,61 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = env("DBBASE_URL")
+}
+
+model VodCategory {
+  id                 Int       @id @default(autoincrement())
+  name               String
+  xtream_category_id Int       @unique
+  vodItems           VodItem[]
+}
+
+model VodItem {
+  id                  Int             @id @default(autoincrement())
+  xtream_vod_id       Int             @unique
+  title_original      String
+  title_normalized    String
+  category_id         Int
+  stream_icon         String?
+  added_at_xtream     DateTime
+  container_extension String
+  category            VodCategory     @relation(fields: [category_id], references: [id])
+  tmdbMovie           TmdbMovie?
+  tmdbCandidates      TmdbCandidate[]
+}
+
+model TmdbMovie {
+  vod_item_id   Int       @id
+  tmdb_id       Int
+  overview      String
+  poster_path   String?
+  backdrop_path String?
+  release_date  DateTime?
+  runtime       Int?
+  vote_average  Float?
+  genres        Json
+  vodItem       VodItem   @relation(fields: [vod_item_id], references: [id])
+}
+
+model SyncRun {
+  id          Int       @id @default(autoincrement())
+  started_at  DateTime
+  finished_at DateTime?
+  status      String
+  inserted    Int
+  updated     Int
+  skipped     Int
+  errors_json Json
+}
+
+model TmdbCandidate {
+  vod_item_id    Int
+  candidate_json Json
+  vodItem        VodItem @relation(fields: [vod_item_id], references: [id])
+
+  @@id([vod_item_id])
 }
