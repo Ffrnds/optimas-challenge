@@ -67,7 +67,7 @@ docker compose up --build
 ---
 
 ##  Testes
-
+- Tentei implementar, mas infelizmente não deu tempo de rodar 100% todos os testes
 ```bash
 npm run test
 ```
